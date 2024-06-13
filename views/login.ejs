@@ -1,0 +1,55 @@
+<div class="loginform_wrapper">
+  <div class="logo txt_center margin_bt40">
+    <img src="/assets/images/login_logo.svg" alt="">
+  </div>
+  <div>
+      <ul class="loginform">
+        <li class="margin_bt10">
+          <input class="user_id input_full" type="email" id="email" name="email" placeholder="아이디" required>
+        </li>
+        <li>
+          <input class="user_pw input_full"type="password" id="password" name="password" placeholder="비밀번호" required >
+        </li>
+      </ul>
+      <div class="btn_wrap margin_top30">
+        <a href="/signUp" class="btn style03">회원가입</a>
+        <button id="btn"class="btn style01" type="button">로그인</button>
+      </div>
+  </div>
+</div>
+  <script>
+    
+  const login = () => {
+    const email = $('#email').val().trim();
+     const password = $('#password').val().trim();
+
+     $.ajax({
+        url:'/api/login',
+        method: 'POST',
+        data:{
+          email,
+          password,
+        },
+        beforeSend: function (res) {
+          $('#loader').addClass('active');
+        },
+        complete: function() {
+          $('#loader').removeClass('active');
+        },
+        success: function(res) {
+          window.location.href='/';
+        },
+        error: function(error) {
+          alert(error.responseJSON.message);
+          console.error(error);
+        }
+     });
+  };
+  $('#btn').on('click', login);
+  $('#password').on('keyup', (e) => {
+    const { keyCode } = e;
+    if(keyCode !== 13) return;
+    login();
+  });
+</script>
+

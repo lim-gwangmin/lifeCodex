@@ -1,0 +1,408 @@
+<!-- <script>
+  console.log("권한 요청 중...");
+  
+   Notification.requestPermission().then((permission) => {
+      if (permission === "granted") {
+         console.log("알림 권한이 허용됨");
+
+         // FCM 메세지 처리
+      } else {
+         console.log("알림 권한 허용 안됨");
+      }
+   });
+
+   // Get permission for receiving notifications and retrieve FCM token
+   navigator.serviceWorker.ready.then(registration => {
+      return registration.pushManager.subscribe({
+         userVisibleOnly: true,
+         applicationServerKey: "BOlnf9NRNTg8OuAp_jg2ydwSFdB3L0iWarw4iuc2gW9kjkp42eRue4aTRntCK8GfEwHLXeT4vQPd5VhHX7t6cgA"
+      });
+   }).then(subscription => {
+      console.log(subscription,'subscription')
+      // Get the FCM token from the subscription
+      const token = subscription.endpoint.split('https://fcm.googleapis.com/fcm/send/')[1];
+      
+      console.log(token,'token')
+      // // Send the token to your Node.js server
+      // fetch('/save-token', {
+      //    method: 'POST',
+      //    headers: {
+      //       'Content-Type': 'application/json',
+      //    },
+      //    body: JSON.stringify({ token }),
+      // });
+   }).catch(err => {
+      console.error('Error getting FCM token:', err);
+   });
+</script> -->
+<section class='section' id="section01">
+   <article class='notice_wrapper'>
+      <div class='colum_area'>
+         <div class='notice_header'>
+            <h2>순서</h2>
+            <% if(permission === 'admin') { %>
+               <div style="display: flex; gap:1rem; align-items: center;">
+                     <button id="plus_button" class="order_btn" type="button">추가</button>
+
+                     <button id="editOrder" class="order_btn">변경</button>
+                     <button id="cancelOrder" class="order_btn" style="display: none;">취소</button>
+                     <button id="saveOrder" class="order_btn"style="display: none;">저장</button>
+               </div>
+            <% } else { %>
+               <div style="display: flex; gap:1rem; align-items: center;">
+                  <button id="change_order" class="order_btn sticker_btn" type="button">당번 변경 요청</button>
+                  <div class="sticker">
+                     <div class="sticker_header">
+                        <h3>당번 변경 요청하기</h3>
+                     </div>
+                     <form id="change_order_form" onsubmit="return false;">
+                        <ul class="sticker_list">
+                           <% if(remainingOrderList.length) { %>
+                              <% remainingOrderList.forEach( user => { %>
+                                 <li>
+                                    <input class="sr-only" type="radio" id="<%= user.email %>" name="change_order" value="<%= user.email %>">
+                                    <label for="<%= user.email %>">
+                                       <span class="number"><%- user.name %>.</span>
+                                       <p class="comment"><%- user.email %></p>
+                                    </label>
+                                 </li>
+                              <% }) %>
+                           <% } else { %>
+                              <li class="non_remainingOrderList">
+                                 내가 당번에 추가되지 않았거나, 현재 요청할 당번이 없습니다.
+                              </li>
+                           <% } %>
+                        </ul>
+                     </form>
+                     <button id="post_order_change" type="button">요청하기</button>
+                  </div>
+               </div>
+            <% } %>
+         </div>
+         <% if(orderList.length) { %>
+           <form id="order_list_form">
+               <ul id="userList" class='notice_list'>
+                  <% orderList.forEach( (user, index) => { %>
+                     <% if (user.target) { %>
+                        <li class="target">
+                           <input type="hidden" id="<%= user.email %>" name="order" value="<%= user.email %>">
+                           <span class="number"><%- index + 1 %>.</span>
+                           <p class="comment"><%- user.name %></p>
+                           <span class="alert">이번주 당번</span>
+                           <% if (permission === 'admin') { %>
+                              <button onclick="admin_delete_order('<%- user.email %>', '<%- user.name %>')" type="button">
+                                 <img src="/assets/images/icon_order_delete.png" alt="" style="width: 2.2rem;">
+                              </button>
+                           <% } %>
+                        </li>
+                     <% } else if (user.nextTarget) { %>
+                        <li class="next_target">
+                           <input type="hidden" id="<%= user.email %>" name="order" value="<%= user.email %>">
+                           <span class="number"><%- index + 1 %>.</span>
+                           <p class="comment"><%- user.name %></p>
+                           <span class="alert">다음주 당번</span>
+                           <% if (permission === 'admin') { %>
+                              <button onclick="admin_delete_order('<%- user.email %>', '<%- user.name %>')" type="button">
+                                 <img src="/assets/images/icon_order_delete.png" alt="" style="width: 2.2rem;">
+                              </button>
+                           <% } %>
+                        </li>
+                     <% } else { %>
+                        <li>
+                           <input type="hidden" id="<%= user.email %>" name="order" value="<%= user.email %>">
+                           <span class="number"><%- index + 1 %>.</span>
+                           <p class="comment"><%- user.name %></p>
+                           <% if (permission === 'admin') { %>
+                              <button onclick="admin_delete_order('<%- user.email %>', '<%- user.name %>')" type="button">
+                                 <img src="/assets/images/icon_order_delete.png" alt="" style="width: 2.2rem;">
+                              </button>
+                           <% } %>
+                        </li>
+                     <% } %>
+                  <% }); %>
+               </ul>
+            </form>
+            <% } else {%>
+               <div class="non_order">
+                  <p>등록된 당번이 없습니다.</p>
+               </div>
+            <% } %>
+      </div>
+   </article>
+</section>
+<section class='section' id="section02">
+   <article class='evrynSwork_wrapper'>
+      <div class='colum_area'>
+         <div class='evrynSwork_header'>
+            <h2>모두의 일</h2>
+            <!-- <button class='btn_evrynSwork_list'>
+               <img src={pencil}/>
+            </button> -->
+         </div>
+         <ul class='check_list'>
+            <% everyWorks.forEach( work => { %>
+               <li>
+                  <%- work.content %>
+                  <% if(work.highlight) { %>
+                     <span>(<%- work.highlight %>)</span>
+                  <% } %>
+               </li>
+            <% }) %>
+         </ul>
+      </div>
+   </article>
+   <article class='duty_wrapper'>
+      <div class='colum_area'>
+         <div class='duty_header'>
+            <h2>당번의 일</h2>
+            <!-- <button class='btn_duty_list'>
+               <img src={pencil}/>
+            </button> -->
+         </div>
+         <ul class='check_list col2'>
+            <% targetWorks.forEach( work => { %>
+               <li>
+                  <span class="custom_checkbox">
+                     <input type="checkbox" id="work_<%= work.id %>" value="<%= work.id %>" <%= work.checked ? 'checked': '' %> />
+                     <label for="work_<%= work.id %>"> 
+                        <%- work.content %> 
+                        <% if(work.highlight) { %>
+                           <span>(<%- work.highlight %>)</span>
+                        <% } %>
+                     </label>
+                  </span>
+               </li>
+            <% }) %>
+         </ul>
+      </div>
+   </article>
+</section>
+<div class="modal modal_type01 modal_bg" id="getOrderList">
+   <div class="modal_container">
+      <div class="modal_header">
+         <h5 class="modal_title">당번 추가하기</h5>
+         <button class="btn_modal_close modal_close icon_font" data-modal="modal_type01">
+            <i class="xi-close"></i>
+            <span class="sr-only">닫기</span>
+         </button>
+      </div>
+      <div class="modal_body">
+         <form action="/api/addToOrderList" method="post" id="save_orderList_form" onsubmit="return false;">
+            <div id="user_loader" style="text-align:center; padding: 5% 0; display:none;">
+               <svg style="width:10rem;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><radialGradient id="a9" cx=".66" fx=".66" cy=".3125" fy=".3125" gradientTransform="scale(1.5)"><stop offset="0" stop-color="#0268FE"></stop><stop offset=".3" stop-color="#0268FE" stop-opacity=".9"></stop><stop offset=".6" stop-color="#0268FE" stop-opacity=".6"></stop><stop offset=".8" stop-color="#0268FE" stop-opacity=".3"></stop><stop offset="1" stop-color="#0268FE" stop-opacity="0"></stop></radialGradient><circle transform-origin="center" fill="none" stroke="url(#a9)" stroke-width="15" stroke-linecap="round" stroke-dasharray="200 1000" stroke-dashoffset="0" cx="100" cy="100" r="70"><animateTransform type="rotate" attributeName="transform" calcMode="spline" dur="2" values="360;0" keyTimes="0;1" keySplines="0 0 1 1" repeatCount="indefinite"></animateTransform></circle><circle transform-origin="center" fill="none" opacity=".2" stroke="#0268FE" stroke-width="15" stroke-linecap="round" cx="100" cy="100" r="70"></circle></svg>
+            </div>
+            <ul id="user_list"></ul>
+         </form>
+         <div class="btn_wrap">
+            <button id="save_orderList_btn" class="btn style01" style="flex:0;" type="button">추가하기</button>
+         </div>
+      </div>
+   </div>
+</div>
+<script>
+   const $user_loader = $('#user_loader');
+   const $getOrderList = $('#getOrderList');
+   $(function(){
+      const ACTIVE = 'active';
+
+      // 당번 추가 목록 조회
+      $('#plus_button').on('click', function() {
+         $getOrderList.addClass(ACTIVE);
+
+         $.ajax({
+            url: '/api/getOrderList',
+            method: 'GET',
+            beforeSend: function() {
+               $user_loader.css('display','block');
+               $('#user_list').empty();
+            },
+            complete: function() {
+               $user_loader.css('display','none');
+            },
+            success: function(users) {
+               if(users.length) {
+                  users.forEach(user => {
+                     const listItem = `
+                        <li>
+                           <input type="checkbox" id="${user.email}" name="check_order_list" value="${user.email}">
+                           <label for="${user.email}">
+                              <span class="name">${user.name}</span>   
+                              <span class="email">${user.email}</span>   
+                           </label>
+                        </li>
+                     `;
+                     $('#user_list').append(listItem);
+                  });
+               } else {
+                  const non = `<p>추가할 인원이 없습니다.</p>`;
+                  $('#user_list').append(non);
+               }
+            },
+            error: function(error) {
+               console.error('사용자 목록을 불러오는 중 오류가 발생했습니다:', error);
+            }
+         });
+      });
+   
+      // 당번 추가
+      $('#save_orderList_btn').on('click', function(e) {
+         const form = document.getElementById('save_orderList_form');
+         const isChecked = $('#user_list').find('input[type="checkbox"]:checked');
+         if (isChecked) {
+            if(confirm('추가하시겠습니까?')) {
+               form.submit();
+            }
+         } else {
+            alert('사용자가 선택되지 않았습니다.');
+         }
+      });
+      
+      // 당번 변경 요청
+      $('#post_order_change').on('click', function(e) {         
+         e.stopPropagation();
+
+         const form = document.getElementById('change_order_form');
+         const isChecked = $('#change_order_form .sticker_list').find('input[type="radio"]:checked');
+         if(!isChecked) return;
+         if(!confirm('변경 요청하시겠습니까?')) return;
+
+         const targetEmail = isChecked.val();
+         $.ajax({
+            url: '/api/requestOrderChange',
+            method: 'POST',
+            data: JSON.stringify({ requesterEmail: "<%= email %>", targetEmail }),
+            contentType: 'application/json',
+            beforeSend: function() {
+               $user_loader.css('display','block');
+               $('#user_list').empty();
+            },
+            complete: function() {
+               $user_loader.css('display','none');
+            },
+            success: function(res) {
+               alert(res.message);
+               $('#change_order').removeClass('active');
+            },
+            error: function(error) {
+               console.error('변경 요청하던 중 오류가 발생했습니다:', error);
+            }
+         });
+      });
+
+     
+
+      // 관리자 순서 변경
+      const userList = document.getElementById('userList');
+      const editOrderBtn = $('#editOrder');
+      const cancelOrderBtn = $('#cancelOrder');
+      const saveOrderBtn = $('#saveOrder');
+      const plusButton = $('#plus_button');
+
+      let sortable = null;
+      let initialOrder = [];
+
+      editOrderBtn.on('click', function() {
+         $(userList).addClass('edit');
+         // 초기 순서 저장
+         initialOrder = Array.from(userList.children);
+         sortable = Sortable.create(userList, {
+               animation: 150,
+               ghostClass: 'ghost', 
+      
+         });
+         editOrderBtn.hide();
+         plusButton.hide();
+         cancelOrderBtn.show();
+         saveOrderBtn.show();
+      });
+
+      cancelOrderBtn.on('click', function() {
+         $(userList).removeClass('edit');
+         if (sortable) {
+               // 초기 순서로 복원
+               initialOrder.forEach(function(item) {
+                  userList.appendChild(item);
+               });
+               sortable.destroy();
+               sortable = null;
+         }
+         editOrderBtn.show();
+         plusButton.show();
+         cancelOrderBtn.hide();
+         saveOrderBtn.hide();
+      });
+
+      saveOrderBtn.on('click', function() {
+         var formData = new FormData();
+
+         $('#order_list_form input[name="order"]').each(function(index, element) {
+            formData.append('order[]', $(element).val());
+         });
+
+         // var order = sortable.toArray();
+         $.ajax({
+               url: '/api/adminChangeOrderList',
+               method: 'POST',
+               processData: false, // FormData 객체 사용시 false로 설정
+               contentType: false, // FormData 객체 사용시 false로 설정
+               data: formData,
+               // data: JSON.stringify({ order: order }),
+               beforeSend: function() {
+                  $user_loader.css('display','block');
+               },
+               complete: function() {
+                  $user_loader.css('display','none');
+               },
+               success: function(response) {
+                  if (response.success) {
+                     alert('순서가 저장되었습니다.');
+                     editOrderBtn.show();
+                     plusButton.show();
+                     cancelOrderBtn.hide();
+                     saveOrderBtn.hide();
+                     sortable.destroy();
+                     sortable = null;
+                     window.location.reload();
+                  } else {
+                     alert('순서 저장에 실패했습니다.');
+                  }
+               },
+               error: function(error) {
+                  console.error('Error:', error);
+                  alert('순서 저장에 실패했습니다.');
+               }
+         });
+      });
+   });
+   // 관리자 당번 삭제
+   function admin_delete_order(email, name) {
+       
+         if(!confirm(`${name}님을 당번에서 제거하시겠습니까?`)) return;
+
+         $.ajax({
+            url: '/api/deleteOrder',
+            type: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ email }),
+            beforeSend: function() {
+               $user_loader.css('display','block');
+            },
+            complete: function() {
+               $user_loader.css('display','none');
+            },
+            success: function(result) {
+               if (result.success) {
+                  alert(`${name}님이 당번에서 제거됐습니다.`);
+                  window.location.reload();
+               } else {
+                  alert('삭제에 실패했습니다. ' + result.error);
+               }
+            },
+            error: function(xhr, status, error) {
+               console.error('Error:', error);
+               alert('An unexpected error occurred');
+            }
+         });
+      };
+</script>
+<script src="/assets/js/everyWork.js"></script>

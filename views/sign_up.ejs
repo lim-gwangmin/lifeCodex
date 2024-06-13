@@ -1,0 +1,185 @@
+<div class="loginform_wrapper">
+   <input type="hidden" id="email_session" name="email_number" value="">
+   <b>
+     회원가입
+   </b>
+   <div>
+       <ul class="loginform">
+         <li class="margin_bt10" style="display: flex; align-items: center; gap:1rem;">
+           <input class="user_id input_full" type="email" id="email" name="email" placeholder="@codexbridge.com" required>
+           <button type="button" class="btn style03" id="sendEmail">인증하기</button>
+         </li>
+         <li class="margin_bt10">
+            <input class="user_pw input_full" type="text" id="username" name="username" placeholder="이름" required>
+         </li>
+         <li class="margin_bt10">
+           <input class="user_pw input_full" type="password" id="password" name="password" placeholder="비밀번호" required >
+         </li>
+       </ul>
+       <!-- <div class="login-mid">
+         <div class="lostId">
+            <a href="/login">로그인</a>
+         </div>
+       </div> -->
+       <div class="btn_wrap margin_top30">
+         <!-- <a href="/login" class="btn style03">로그인</a> -->
+         <button class="btn style01" id="sign_up_btn" type="button">회원가입</button>
+       </div>
+   </div>
+ </div>
+<!-- 이메일 인증 모달 -->
+<div class="modal" id="email_number">
+   <div class="modal_container">
+      <h1>이메일 인증번호</h1>
+      <div class="email_inputs">
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+         <input type="text" maxlength="1" pattern="[0-9]" oninput="moveToNextInput(this)" name="mail_number" required>
+      </div>
+      <div class="btn_wrap">
+         <button class="btn style02" onclick="$('#email_number').removeClass('active');" type="button">닫기</button>
+         <button class="btn style01" id="sendVerificationEmail" disabled type="button" onclick="verificationCode()">인증번호 확인</button>
+      </div>
+   </div>
+   <script>
+      // input focus event
+      function moveToNextInput(input) {
+         // 입력 필드에 입력된 값이 숫자가 아닌 경우 삭제
+         input.value = input.value.replace(/[^0-9]/g, '');
+   
+         // 다음 입력 필드로 이동
+         if (input.value.length === 1) {
+            var nextInput = input.nextElementSibling;
+            if (nextInput !== null) {
+               nextInput.focus();
+            }
+         };
+
+         if(verificationCode().length === 6) {
+            $('#sendVerificationEmail').prop('disabled', false);
+         } else {
+            $('#sendVerificationEmail').prop('disabled', true);
+         }
+      };
+      // 인증코드 추출 
+      function verificationCode() {
+         let code = '';
+         const inputs = document.querySelectorAll('input[name="mail_number"]');
+         inputs.forEach(function(input) {
+            code += input.value;
+         });
+
+         return code; 
+      }
+      // 인증번호 확인 
+      $('#sendVerificationEmail').on('click', function(e) {
+         const code = verificationCode();
+
+         $.ajax({
+            url: '/api/emailAuthentication',
+            method: 'POST',
+            data: {
+               verificationCode: code
+            },
+            beforeSend: function (res) {
+               $('#loader').addClass('active');
+            },
+            complete: function() {
+               $('#loader').removeClass('active');
+            },
+            success: function (res) {
+               const { result, message } = res;
+               
+               alert(message);
+               $('#email_number').removeClass('active');
+            },
+            error: function (error) {
+               alert(error.responseJSON.message);
+               $('#email').prop('readonly', false);
+               console.error(error);
+            }
+         });
+
+      });
+   </script>
+</div>
+<!-- 
+   1. 이메일 작성 후 인증하기 버튼 클릭 
+   2. 이메일 성공적으로 보냈다면, 알림창 표시 '메일이 전송됐습니다.' input readonly
+   3. 발급한 코드를 입력하는 팝업창이 뜬다. 
+   4. 발급된 코드는 세션으로 관리하고 5분동안 유효하고 지나면 폐기한다. 
+   5. 팝업창에 5분 카운팅 필요 및 5분 지난 코드 입력 시 없는 코드 메시지 추가 세션에도 삭제
+   6. 인증이 된다면 email input readony로 변경 
+ -->
+<script>
+   $(document).ready(function () {
+      // 인증번호 발송하기
+      $('#sendEmail').on('click', function () {
+         const $btn = $(this);
+         const email = $('#email').val().trim();
+         $('#email').prop('readonly', true);
+
+         $.ajax({
+            url: '/api/sendEmail',
+            method: 'POST',
+            data: {
+               email: email
+            },
+            beforeSend: function (res) {
+               $('#loader').addClass('active');
+            },
+            complete: function() {
+               $('#loader').removeClass('active');
+            },
+            success: function (res) {
+               const { result, message } = res;
+               alert(message);
+               $('#email_number').addClass('active');
+               $('#email_session').val(res.verificationCode);
+              
+            },
+            error: function (error) {
+               $btn.prop('readonly', false);
+               $('#email').prop('readonly', false);
+               alert(error.responseJSON.message);
+               console.error(error);
+            }
+         });
+      });
+      // 회원가입 
+      $('#sign_up_btn').on('click', function (event) {
+         event.preventDefault();
+         const email = $('#email').val().trim();
+         const name = $('#username').val().trim();
+         const password = $('#password').val().trim();
+         const email_session = $('#email_session').val().trim();
+         $.ajax({
+            url: '/api/signUp',
+            method: 'POST',
+            data: {
+               email: email,
+               email_session: email_session,
+               name: name,
+               password: password
+            },
+            beforeSend: function (res) {
+               $('#loader').addClass('active');
+            },
+            complete: function() {
+               $('#loader').removeClass('active');
+            },
+            success: function (res) {
+               alert(res.message + '로그인 페이지로 이동합니다.');
+               window.location.href = '/login';
+            },
+            error: function (error) {
+               alert(error.responseJSON.message);
+               console.error(error);
+            }
+         });
+      });
+   });
+</script>

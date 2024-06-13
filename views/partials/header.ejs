@@ -1,0 +1,122 @@
+<header id="header">
+   <div class="container">
+      <div class="flex_wrapper">
+         <h1 class="logo">
+            <a href="/">
+               <img src="/assets/images/logo.png">
+            </a>
+         </h1>
+         <div class="user_info">
+            <ul>
+               <li>
+                  <button id="alert_btn" class="sticker_btn" type="button">
+                     <img src="/assets/images/icon_noti.svg" alt="">
+                  </button>
+                  <div class="sticker">
+                     <div class="sticker_header">
+                        <h3>알림</h3>
+                     </div>
+                     <form id="notification_form" onsubmit="return false;">
+                        <ul id="notification_list" class="sticker_list">
+                           
+                        </ul>
+                        <div id="user_loader" style="text-align:center; padding: 5% 0; display:none;">
+                           <svg style="width:10rem;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><radialGradient id="a9" cx=".66" fx=".66" cy=".3125" fy=".3125" gradientTransform="scale(1.5)"><stop offset="0" stop-color="#0268FE"></stop><stop offset=".3" stop-color="#0268FE" stop-opacity=".9"></stop><stop offset=".6" stop-color="#0268FE" stop-opacity=".6"></stop><stop offset=".8" stop-color="#0268FE" stop-opacity=".3"></stop><stop offset="1" stop-color="#0268FE" stop-opacity="0"></stop></radialGradient><circle transform-origin="center" fill="none" stroke="url(#a9)" stroke-width="15" stroke-linecap="round" stroke-dasharray="200 1000" stroke-dashoffset="0" cx="100" cy="100" r="70"><animateTransform type="rotate" attributeName="transform" calcMode="spline" dur="2" values="360;0" keyTimes="0;1" keySplines="0 0 1 1" repeatCount="indefinite"></animateTransform></circle><circle transform-origin="center" fill="none" opacity=".2" stroke="#0268FE" stroke-width="15" stroke-linecap="round" cx="100" cy="100" r="70"></circle></svg>
+                        </div>
+                     </form>
+                  </div>
+               </li>
+               <li class="name"><%- name %></li>
+               <li>
+                  <a href="/logOut" class="log_out">로그아웃</a>
+               </li>
+            </ul>
+         </div>
+      </div>
+   </div>
+</header>
+<script>
+    // 당번 변경 수락 및 거절
+    function respondToExchangeRequest(targetEmail, requesterEmail, action, createdAt) {
+         $.ajax({
+            url: '/api/responseOrderChange',
+            type: 'POST',
+            data: JSON.stringify({ targetEmail, requesterEmail, action, createdAt }),
+            contentType: 'application/json',
+            beforeSend: function() {
+               $user_loader.css('display','block');
+            },
+            complete: function() {
+               $user_loader.css('display','none');
+               $('#alert_btn').removeClass('active');
+            },
+            success: function(response) {
+               alert(response.message);
+            },
+            error: function(error) {
+               alert('Error: ' + error.responseJSON.error);
+            }
+         });
+      };
+
+      //당번 알림 수신
+      $('#alert_btn').on('click', function() {
+         const $user_loader = $('#user_loader');
+         const $notification_list = $('#notification_list');
+
+         $.ajax({
+            url: '/api/orderChangeNotifications',
+            method: 'POST',
+            data: JSON.stringify({ userEmail: "<%= email %>" }),
+            contentType: 'application/json',
+            beforeSend: function() {
+               $notification_list.html('');
+               $user_loader.css('display','block');
+            },
+            complete: function() {
+               $user_loader.css('display','none');
+            },
+            success: function(res) {
+               const { data } = res;
+               let html = '';
+               const filterText = status => {
+                  const text = {
+                     rejected: '거절됐습니다',
+                     accepted: '변경되었습니다.'
+                  };
+                  return text[status];
+               };
+
+               if(data.length) {
+                  data.forEach((noti,index) => {
+                     const { email, message, requestEmail, status, createdAt } = noti;
+                     html+= `
+                        <li class="status ${status}">
+                           <div class="info">
+                              <p class="date">${createdAt.split("T")[0]}</p>
+                              <p class="message">${message}</p>
+                           </div>
+                           ${
+                              status === 'pending' 
+                              ?
+                              `<div class="btn_wrap" style="margin:0; flex-flow:row;">
+                              <button type="button" class="btn accepted" onclick="respondToExchangeRequest('${email}','${requestEmail}','accept', '${createdAt}')">수락</button>
+                              <button type="button" class="btn rejected" onclick="respondToExchangeRequest('${email}','${requestEmail}','reject', '${createdAt}')">거절</button>
+                              </div>`
+                              : `<div class="comment ${status}">${filterText(status)}</div>`
+                           }
+                        </li>
+                     `;
+                  });
+               } else {
+                  html = '<li style="padding:5% 0; text-align:center">알림이 없습니다.</li>';
+               }
+               $notification_list.html(html);
+
+            },
+            error: function(error) {
+               console.error('목록을 불러오는 중 오류가 발생했습니다:', error);
+            }
+         });
+      });
+</script>
